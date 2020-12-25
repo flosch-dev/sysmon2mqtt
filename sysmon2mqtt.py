@@ -38,23 +38,35 @@ def mqtt_publish(topic,payload):
     except:
         print('fehler')
 
-mqttclient = mqtt.Client(MQTT_CLIENT_ID)
-try:
-    mqttclient.connect(MQTT_HOST, port=MQTT_PORT)
-except:
-    print("MQTT connection error")
-    exit(1)
+def mqtt_connect():
+    mqttclient = mqtt.Client(MQTT_CLIENT_ID)
+    try:
+        mqttclient.connect(MQTT_HOST, port=MQTT_PORT, keepalive=60)
+        mqttclient.loop_start()
+        break
+    except:
+        print("MQTT connection error")
+        exit(1)
 
-mqtt_publish('SYSMON/CPU/cpu_load5',os.getloadavg()[1])
-mqtt_publish('SYSMON/CPU/cpu_count',os.cpu_count())
-mqtt_publish('SYSMON/CPU/cpu_util',round(os.getloadavg()[1] * 100 / os.cpu_count(),2))
-mqtt_publish('SYSMON/RAM/ram_avail',int(os.popen('cat /proc/meminfo | grep MemAvailable | awk \'{print $2}\'').read()))
-mqtt_publish('SYSMON/RAM/ram_total',int(os.popen('cat /proc/meminfo | grep MemTotal | awk \'{print $2}\'').read()))
-mqtt_publish('SYSMON/RAM/ram_used',int(os.popen('cat /proc/meminfo | grep MemTotal | awk \'{print $2}\'').read()) - int(os.popen('cat /proc/meminfo | grep MemAvailable | awk \'{print $2}\'').read()))
-mqtt_publish('SYSMON/RAM/ram_util',round(100 - int(os.popen('cat /proc/meminfo | grep MemAvailable | awk \'{print $2}\'').read()) * 100 / int(os.popen('cat /proc/meminfo | grep MemTotal | awk \'{print $2}\'').read()),2))
-mqtt_publish('SYSMON/PROCESS/process_count',int(os.popen('ps aux | grep -v "ps aux" | wc -l').read()))
-mqtt_publish('SYSMON/SYSTEM/uptime',os.popen('uptime -p').read().rstrip())
-mqtt_publish('SYSMON/SYSTEM/hostname',os.popen('hostname').read().rstrip())
-mqtt_publish('SYSMON/SYSTEM/os_version',os.popen('grep PRETTY_NAME /etc/os-release | cut -d "\\"" -f 2').read().rstrip())
-mqtt_publish('SYSMON/SYSTEM/rpi_model',os.popen('cat /proc/device-tree/model').read().rstrip())
-mqttclient.disconnect()
+def publish_sysmon():
+    mqtt_publish('SYSMON/CPU/cpu_load5',os.getloadavg()[1])
+    mqtt_publish('SYSMON/CPU/cpu_count',os.cpu_count())
+    mqtt_publish('SYSMON/CPU/cpu_util',round(os.getloadavg()[1] * 100 / os.cpu_count(),2))
+    mqtt_publish('SYSMON/RAM/ram_avail',int(os.popen('cat /proc/meminfo | grep MemAvailable | awk \'{print $2}\'').read()))
+    mqtt_publish('SYSMON/RAM/ram_total',int(os.popen('cat /proc/meminfo | grep MemTotal | awk \'{print $2}\'').read()))
+    mqtt_publish('SYSMON/RAM/ram_used',int(os.popen('cat /proc/meminfo | grep MemTotal | awk \'{print $2}\'').read()) - int(os.popen('cat /proc/meminfo | grep MemAvailable | awk \'{print $2}\'').read()))
+    mqtt_publish('SYSMON/RAM/ram_util',round(100 - int(os.popen('cat /proc/meminfo | grep MemAvailable | awk \'{print $2}\'').read()) * 100 / int(os.popen('cat /proc/meminfo | grep MemTotal | awk \'{print $2}\'').read()),2))
+    mqtt_publish('SYSMON/PROCESS/process_count',int(os.popen('ps aux | grep -v "ps aux" | wc -l').read()))
+    mqtt_publish('SYSMON/SYSTEM/uptime',os.popen('uptime -p').read().rstrip())
+    mqtt_publish('SYSMON/SYSTEM/hostname',os.popen('hostname').read().rstrip())
+    mqtt_publish('SYSMON/SYSTEM/os_version',os.popen('grep PRETTY_NAME /etc/os-release | cut -d "\\"" -f 2').read().rstrip())
+    mqtt_publish('SYSMON/SYSTEM/rpi_model',os.popen('cat /proc/device-tree/model').read().rstrip())
+
+
+def main():
+    mqtt_connect()
+    mqttclient.on_connect = publish_sysmon()
+    mqttclient.disconnect()
+
+if __name__=="__main__":
+   main()

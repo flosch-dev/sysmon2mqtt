@@ -26,46 +26,29 @@ auth = {
   'password':"MQTT_PASS"
 }
 
+def publish_sysmon(mqttclient):
+    mqttclient.publish('SYSMON/CPU/cpu_load5',os.getloadavg()[1])
+    mqttclient.publish('SYSMON/CPU/cpu_count',os.cpu_count())
+    mqttclient.publish('SYSMON/CPU/cpu_util',round(os.getloadavg()[1] * 100 / os.cpu_count(),2))
+    mqttclient.publish('SYSMON/RAM/ram_avail',int(os.popen('cat /proc/meminfo | grep MemAvailable | awk \'{print $2}\'').read()))
+    mqttclient.publish('SYSMON/RAM/ram_total',int(os.popen('cat /proc/meminfo | grep MemTotal | awk \'{print $2}\'').read()))
+    mqttclient.publish('SYSMON/RAM/ram_used',int(os.popen('cat /proc/meminfo | grep MemTotal | awk \'{print $2}\'').read()) - int(os.popen('cat /proc/meminfo | grep MemAvailable | awk \'{print $2}\'').read()))
+    mqttclient.publish('SYSMON/RAM/ram_util',round(100 - int(os.popen('cat /proc/meminfo | grep MemAvailable | awk \'{print $2}\'').read()) * 100 / int(os.popen('cat /proc/meminfo | grep MemTotal | awk \'{print $2}\'').read()),2))
+    mqttclient.publish('SYSMON/PROCESS/process_count',int(os.popen('ps aux | grep -v "ps aux" | wc -l').read()))
+    mqttclient.publish('SYSMON/SYSTEM/uptime',os.popen('uptime -p').read().rstrip())
+    mqttclient.publish('SYSMON/SYSTEM/hostname',os.popen('hostname').read().rstrip())
+    mqttclient.publish('SYSMON/SYSTEM/os_version',os.popen('grep PRETTY_NAME /etc/os-release | cut -d "\\"" -f 2').read().rstrip())
+    mqttclient.publish('SYSMON/SYSTEM/rpi_model',os.popen('cat /proc/device-tree/model').read().rstrip())
 
-def mqtt_publish(topic,payload):
-    """ function to send MQTT message """
-    try:
-        mqttclient.publish(
-                      topic,
-                      payload=payload,
-                      qos=0,
-                      retain=False)
-    except:
-        print('fehler')
-
-def mqtt_connect():
+def main():
     mqttclient = mqtt.Client(MQTT_CLIENT_ID)
     try:
         mqttclient.connect(MQTT_HOST, port=MQTT_PORT, keepalive=60)
-        mqttclient.loop_start()
-        break
     except:
         print("MQTT connection error")
         exit(1)
-
-def publish_sysmon():
-    mqtt_publish('SYSMON/CPU/cpu_load5',os.getloadavg()[1])
-    mqtt_publish('SYSMON/CPU/cpu_count',os.cpu_count())
-    mqtt_publish('SYSMON/CPU/cpu_util',round(os.getloadavg()[1] * 100 / os.cpu_count(),2))
-    mqtt_publish('SYSMON/RAM/ram_avail',int(os.popen('cat /proc/meminfo | grep MemAvailable | awk \'{print $2}\'').read()))
-    mqtt_publish('SYSMON/RAM/ram_total',int(os.popen('cat /proc/meminfo | grep MemTotal | awk \'{print $2}\'').read()))
-    mqtt_publish('SYSMON/RAM/ram_used',int(os.popen('cat /proc/meminfo | grep MemTotal | awk \'{print $2}\'').read()) - int(os.popen('cat /proc/meminfo | grep MemAvailable | awk \'{print $2}\'').read()))
-    mqtt_publish('SYSMON/RAM/ram_util',round(100 - int(os.popen('cat /proc/meminfo | grep MemAvailable | awk \'{print $2}\'').read()) * 100 / int(os.popen('cat /proc/meminfo | grep MemTotal | awk \'{print $2}\'').read()),2))
-    mqtt_publish('SYSMON/PROCESS/process_count',int(os.popen('ps aux | grep -v "ps aux" | wc -l').read()))
-    mqtt_publish('SYSMON/SYSTEM/uptime',os.popen('uptime -p').read().rstrip())
-    mqtt_publish('SYSMON/SYSTEM/hostname',os.popen('hostname').read().rstrip())
-    mqtt_publish('SYSMON/SYSTEM/os_version',os.popen('grep PRETTY_NAME /etc/os-release | cut -d "\\"" -f 2').read().rstrip())
-    mqtt_publish('SYSMON/SYSTEM/rpi_model',os.popen('cat /proc/device-tree/model').read().rstrip())
-
-
-def main():
-    mqtt_connect()
-    mqttclient.on_connect = publish_sysmon()
+    mqttclient.loop_start()
+    publish_sysmon(mqttclient)
     mqttclient.disconnect()
 
 if __name__=="__main__":

@@ -6,4 +6,6 @@ python3 module required:
 ```
 
 to run every 5 min via cron, add the following cronjob:
+```bash
 */5 * * * * /<path-to-file>/sysmon2mqtt.py
+```
